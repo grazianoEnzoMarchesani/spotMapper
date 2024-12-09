@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Local Services Map</title>
+    <meta charset="UTF-8">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css" />
+    <style>
+        #map { 
+            height: 100vh; 
+            width: 70%; 
+            float: left;
+        }
+        #sidebar {
+            width: 30%;
+            float: right;
+            height: 100vh;
+            overflow-y: auto;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+        #apiKeyModal {
+            display: block;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            padding: 20px;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        #placeTypes {
+            margin: 10px 0;
+            max-height: 70vh;
+            overflow-y: auto;
+            padding: 0 10px;
+        }
+
+        .category {
+            margin-bottom: 15px;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .category h4 {
+            margin: 10px 0;
+            color: #333;
+            font-size: 1em;
+        }
+
+        .checkbox-item {
+            margin: 5px 0;
+            display: flex;
+            align-items: center;
+        }
+
+        .checkbox-item label {
+            margin-left: 5px;
+            font-size: 0.9em;
+            cursor: pointer;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            cursor: pointer;
+        }
+
+        .no-results {
+            padding: 20px;
+            text-align: center;
+            color: #666;
+            background: #f5f5f5;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+
+        .no-results p {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+<body>
+    <div id="apiKeyModal">
+        <h3>Inserisci la tua API Key di Google Maps</h3>
+        <input type="text" id="apiKeyInput" placeholder="API Key">
+        <button id="confirmApiKey">Conferma</button>
+        <p style="font-size: 0.9em; color: #666;">
+            Assicurati di aver attivato questi servizi nella Google Cloud Console:
+            <ul>
+                <li>Maps JavaScript API</li>
+                <li>Places API</li>
+                <li>Geocoding API</li>
+            </ul>
+            <a href="https://console.cloud.google.com/apis/library" target="_blank">
+                Vai alla Console Google Cloud
+            </a>
+        </p>
+    </div>
+    <div id="map"></div>
+    <div id="sidebar">
+        <div id="placeTypes">
+            <!-- Ristorazione -->
+            <div class="category">
+                <h4>Ristorazione</h4>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="restaurant" value="restaurant" checked>
+                    <label for="restaurant">Ristoranti</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="bar" value="bar" checked>
+                    <label for="bar">Bar</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="cafe" value="cafe" checked>
+                    <label for="cafe">Caffè</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="bakery" value="bakery" checked>
+                    <label for="bakery">Panetterie</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="ice_cream" value="ice_cream" checked>
+                    <label for="ice_cream">Gelaterie</label>
+                </div>
+            </div>
+
+            <!-- Negozi -->
+            <div class="category">
+                <h4>Shopping</h4>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="shopping_mall" value="shopping_mall" checked>
+                    <label for="shopping_mall">Centri Commerciali</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="supermarket" value="supermarket" checked>
+                    <label for="supermarket">Supermercati</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="clothing_store" value="clothing_store" checked>
+                    <label for="clothing_store">Negozi di Abbigliamento</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="convenience_store" value="convenience_store" checked>
+                    <label for="convenience_store">Mini Market</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="department_store" value="department_store" checked>
+                    <label for="department_store">Grandi Magazzini</label>
+                </div>
+            </div>
+
+            <!-- Servizi -->
+            <div class="category">
+                <h4>Servizi Essenziali</h4>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="hospital" value="hospital" checked>
+                    <label for="hospital">Ospedali</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="pharmacy" value="pharmacy" checked>
+                    <label for="pharmacy">Farmacie</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="doctor" value="doctor" checked>
+                    <label for="doctor">Studi Medici</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="police" value="police" checked>
+                    <label for="police">Polizia</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="post_office" value="post_office" checked>
+                    <label for="post_office">Uffici Postali</label>
+                </div>
+            </div>
+
+            <!-- Trasporti -->
+            <div class="category">
+                <h4>Trasporti</h4>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="bus_station" value="bus_station" checked>
+                    <label for="bus_station">Stazioni Bus</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="subway_station" value="subway_station" checked>
+                    <label for="subway_station">Stazioni Metro</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="train_station" value="train_station" checked>
+                    <label for="train_station">Stazioni Ferroviarie</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="gas_station" value="gas_station" checked>
+                    <label for="gas_station">Distributori di Benzina</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="parking" value="parking" checked>
+                    <label for="parking">Parcheggi</label>
+                </div>
+            </div>
+
+            <!-- Intrattenimento e Cultura -->
+            <div class="category">
+                <h4>Intrattenimento e Cultura</h4>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="museum" value="museum" checked>
+                    <label for="museum">Musei</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="movie_theater" value="movie_theater" checked>
+                    <label for="movie_theater">Cinema</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="library" value="library" checked>
+                    <label for="library">Biblioteche</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="art_gallery" value="art_gallery" checked>
+                    <label for="art_gallery">Gallerie d'Arte</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="tourist_attraction" value="tourist_attraction" checked>
+                    <label for="tourist_attraction">Attrazioni Turistiche</label>
+                </div>
+            </div>
+
+            <!-- Sport e Tempo Libero -->
+            <div class="category">
+                <h4>Sport e Tempo Libero</h4>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="gym" value="gym" checked>
+                    <label for="gym">Palestre</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="park" value="park" checked>
+                    <label for="park">Parchi</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="stadium" value="stadium" checked>
+                    <label for="stadium">Stadi</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="swimming_pool" value="swimming_pool" checked>
+                    <label for="swimming_pool">Piscine</label>
+                </div>
+            </div>
+
+            <!-- Servizi Finanziari -->
+            <div class="category">
+                <h4>Servizi Finanziari</h4>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="bank" value="bank" checked>
+                    <label for="bank">Banche</label>
+                </div>
+                <div class="checkbox-item">
+                    <input type="checkbox" id="atm" value="atm" checked>
+                    <label for="atm">Bancomat</label>
+                </div>
+            </div>
+        </div>
+        <div id="placesList"></div>
+        <button id="downloadCSV" style="margin: 10px; padding: 8px 16px; display: none;">
+            Scarica Lista (CSV)
+        </button>
+    </div>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+            crossorigin=""></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    <script type="module" src="js/main.js"></script>
+</body>
+</html> 
